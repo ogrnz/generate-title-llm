@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import sys
@@ -6,13 +7,13 @@ from functools import wraps
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import AsyncOpenAI, OpenAI
+from openai import AsyncOpenAI
 from tinydb import TinyDB, Query
 
 logging.basicConfig(
     filename="app.log",
     filemode="a",
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("generate_data")
@@ -67,10 +68,11 @@ async def query_openai(query: str, client: AsyncOpenAI, model="gpt-3.5-turbo"):
     return json.loads(response.choices[0].message.content)
 
 
-@timeit
-def generate_titles(conversations: list, db: TinyDB):
+async def generate_titles(conversations: list, db: TinyDB):
     Prompt = Query()
     client = AsyncOpenAI()
+
+    to_query = []
     for conversation in conversations:
         # Check if the prompt is already in db
         message = conversation["message"]
@@ -78,25 +80,33 @@ def generate_titles(conversations: list, db: TinyDB):
         if len(search) > 0:
             logger.info(f"Message already exists in db (doc_id {search[0].doc_id})")
             continue
+        else:
+            to_query.append(message)
 
-        # All good, query openai
-        response_json = query_openai(message, client=client)
+    tasks = [query_openai(message, client=client) for message in to_query]
+    results = await asyncio.gather(*tasks)
 
-        # Parse response
-        title = response_json.get("title")
+    titles = [result.get("title") for result in results]
+    return to_query, titles
 
-        # Insert in db if necessary
+
+def insert_titles_into_db(messages, titles):
+    queries = []
+    for message, title in zip(messages, titles):
         if title:
             query = {"message": message, "title": title}
-            logger.info(f"Title generated: {query['title']}")
-            db.insert(query)
+            logger.info(f"Title generated and inserted: {query['title']}")
+            queries.append(query)
         else:
             logger.warning(f"Something went wrong while generating title for {message}")
+    db.insert_multiple(queries)
 
 
 def display_titles(db):
     for observation in db.all():
-        print(observation["title"], ":", observation["message"])
+        print(observation["title"])
+        print(observation["message"])
+        print("\n")
 
 
 if __name__ == "__main__":
@@ -104,10 +114,17 @@ if __name__ == "__main__":
     logger.info("App started")
 
     jsonl_path = Path("./data/dataset.jsonl")
-    conversations = read_jsonl(jsonl_path)
-    conversations = conversations[5:10]
-
     db = TinyDB("./data/db.json")
+    conversations = read_jsonl(jsonl_path)
 
-    generate_titles(conversations, db=db)
+    chunksize = 100  # Shouldn't be too high, otherwise we'll get rate limited
+    for i in range(0, len(conversations), chunksize):
+        t0 = time.perf_counter()
+        messages, titles = asyncio.run(
+            generate_titles(conversations[i : i + chunksize], db=db)
+        )
+        insert_titles_into_db(messages, titles)
+        t1 = time.perf_counter()
+        print(f"Chunk generation took {t1 - t0:.2f}s")
+
     # display_titles(db)
