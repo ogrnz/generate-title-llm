@@ -18,6 +18,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 token_logger = logging.getLogger("token_logger")
 token_logger.addHandler(logging.FileHandler("tokens.log"))
 
+# Mute verbose logger
 for muted_logger in ("httpx", "httpcore.connection"):
     logging.getLogger(muted_logger).setLevel(logging.ERROR)
 
@@ -52,7 +53,7 @@ def query_openai(query: str, client: OpenAI, model="gpt-3.5-turbo"):
     return json.loads(response.choices[0].message.content)
 
 
-def generate_title(conversations: list, db: TinyDB):
+def generate_titles(conversations: list, db: TinyDB):
     Prompt = Query()
     for conversation in conversations:
         # Check if the prompt is already in db
@@ -79,7 +80,7 @@ def generate_title(conversations: list, db: TinyDB):
 
 def display_titles(db):
     for observation in db.all():
-        print(observation["title"], observation["message"])
+        print(observation["title"], ":", observation["message"])
 
 
 if __name__ == "__main__":
@@ -92,5 +93,5 @@ if __name__ == "__main__":
 
     db = TinyDB("./data/db.json")
 
-    # generate_title(conversations, db=db)
+    # generate_titles(conversations, db=db)
     display_titles(db)
