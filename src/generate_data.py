@@ -25,6 +25,10 @@ token_logger.addHandler(logging.FileHandler("tokens.log"))
 for muted_logger in ("httpx", "httpcore.connection"):
     logging.getLogger(muted_logger).setLevel(logging.ERROR)
 
+# Keep track of total tokens since last 'pause'
+RATE_LIMITER = 0
+MODEL = "gpt-3.5-turbo"
+
 
 def timeit(func):
     @wraps(func)
@@ -49,6 +53,16 @@ def read_jsonl(jsonl_path) -> list:
 
 
 async def query_openai(query: str, client: AsyncOpenAI, model="gpt-3.5-turbo"):
+    global RATE_LIMITER
+
+    print(RATE_LIMITER)
+    # Rate limiter
+    if RATE_LIMITER > 1_000:
+        logger.info("Sleeping for 60s to avoid rate limite")
+        time.sleep(60)
+        # Reset rate limiter
+        RATE_LIMITER = 0  # Not shared to already launched tasks right
+
     response = await client.chat.completions.create(
         model=model,
         response_format={"type": "json_object"},
@@ -63,8 +77,10 @@ async def query_openai(query: str, client: AsyncOpenAI, model="gpt-3.5-turbo"):
             },
         ],
     )
+    tot_tokens = response.usage.total_tokens
+    RATE_LIMITER += tot_tokens
     logger.debug(response)
-    token_logger.info(response.usage.total_tokens)
+    token_logger.info(tot_tokens)
     return json.loads(response.choices[0].message.content)
 
 
@@ -83,7 +99,7 @@ async def generate_titles(conversations: list, db: TinyDB):
         else:
             to_query.append(message)
 
-    tasks = [query_openai(message, client=client) for message in to_query]
+    tasks = [query_openai(message, client=client, model=MODEL) for message in to_query]
     results = await asyncio.gather(*tasks)
 
     titles = [result.get("title") for result in results]
