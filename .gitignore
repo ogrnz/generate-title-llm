@@ -2,3 +2,4 @@ venv
 .env
 *.log
 .DS_Store
+**/**/db.json
