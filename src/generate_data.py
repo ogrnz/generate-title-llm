@@ -1,10 +1,12 @@
 import json
 import logging
 import sys
+import time
+from functools import wraps
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from tinydb import TinyDB, Query
 
 logging.basicConfig(
@@ -23,18 +25,30 @@ for muted_logger in ("httpx", "httpcore.connection"):
     logging.getLogger(muted_logger).setLevel(logging.ERROR)
 
 
+def timeit(func):
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f"Function {func.__name__} took {total_time:.2f} s")
+        return result
+
+    return timeit_wrapper
+
+
 def read_jsonl(jsonl_path) -> list:
     conversations = []
     with open(jsonl_path, "r", encoding="utf-8") as jsonl_file:
         for conversation in jsonl_file:
-            first_msg = json.loads(conversation)["conversations"][0]["value"]
-            data = {"message": first_msg, "title": ""}
-            conversations.append(data)
+            first_msg = json.loads(conversation)
+            conversations.append(first_msg)
     return conversations
 
 
-def query_openai(query: str, client: OpenAI, model="gpt-3.5-turbo"):
-    response = client.chat.completions.create(
+async def query_openai(query: str, client: AsyncOpenAI, model="gpt-3.5-turbo"):
+    response = await client.chat.completions.create(
         model=model,
         response_format={"type": "json_object"},
         messages=[
@@ -53,8 +67,10 @@ def query_openai(query: str, client: OpenAI, model="gpt-3.5-turbo"):
     return json.loads(response.choices[0].message.content)
 
 
+@timeit
 def generate_titles(conversations: list, db: TinyDB):
     Prompt = Query()
+    client = AsyncOpenAI()
     for conversation in conversations:
         # Check if the prompt is already in db
         message = conversation["message"]
@@ -64,7 +80,7 @@ def generate_titles(conversations: list, db: TinyDB):
             continue
 
         # All good, query openai
-        response_json = query_openai(message, client=OpenAI())
+        response_json = query_openai(message, client=client)
 
         # Parse response
         title = response_json.get("title")
@@ -87,11 +103,11 @@ if __name__ == "__main__":
     load_dotenv()
     logger.info("App started")
 
-    jsonl_path = Path("./data/chatalpaca-10k.json")
+    jsonl_path = Path("./data/dataset.jsonl")
     conversations = read_jsonl(jsonl_path)
-    conversations = conversations[:100]
+    conversations = conversations[5:10]
 
     db = TinyDB("./data/db.json")
 
-    # generate_titles(conversations, db=db)
-    display_titles(db)
+    generate_titles(conversations, db=db)
+    # display_titles(db)
