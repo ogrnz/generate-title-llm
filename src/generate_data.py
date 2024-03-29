@@ -55,13 +55,11 @@ def read_jsonl(jsonl_path) -> list:
 async def query_openai(query: str, client: AsyncOpenAI, model="gpt-3.5-turbo"):
     global RATE_LIMITER
 
-    print(RATE_LIMITER)
     # Rate limiter
-    if RATE_LIMITER > 1_000:
-        logger.info("Sleeping for 60s to avoid rate limite")
+    if RATE_LIMITER > 3_000:
+        logger.info(f"Sleeping for 60s to avoid rate limite ({RATE_LIMITER})")
         time.sleep(60)
-        # Reset rate limiter
-        RATE_LIMITER = 0  # Not shared to already launched tasks right
+        RATE_LIMITER = 0  # Not shared to already launched tasks right?
 
     response = await client.chat.completions.create(
         model=model,
@@ -119,10 +117,7 @@ def insert_titles_into_db(messages, titles):
 
 
 def display_titles(db):
-    for observation in db.all():
-        print(observation["title"])
-        print(observation["message"])
-        print("\n")
+    print(f"{len(db.all())} titles generated")
 
 
 if __name__ == "__main__":
@@ -133,7 +128,7 @@ if __name__ == "__main__":
     db = TinyDB("./data/db.json")
     conversations = read_jsonl(jsonl_path)
 
-    chunksize = 100  # Shouldn't be too high, otherwise we'll get rate limited
+    chunksize = 400  # Shouldn't be too high, otherwise we'll get rate limited
     for i in range(0, len(conversations), chunksize):
         t0 = time.perf_counter()
         messages, titles = asyncio.run(
@@ -143,4 +138,4 @@ if __name__ == "__main__":
         t1 = time.perf_counter()
         print(f"Chunk generation took {t1 - t0:.2f}s")
 
-    # display_titles(db)
+    display_titles(db)
