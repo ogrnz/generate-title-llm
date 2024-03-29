@@ -135,10 +135,15 @@ def construct_database(conversations):
 
 
 def construct_final_dataset(db):
-    Entry = Query()
+    final_messages = set()
     final_dataset = []
-    for Entry in db.all():
-        final_dataset.append(Entry)
+    for entry in db.all():
+        # Ensure no duplicates
+        if entry["message"] in final_messages:
+            continue
+        final_messages.add(entry["message"])
+        final_dataset.append(entry)
+    print(len(final_dataset))
     return final_dataset
 
 
@@ -162,4 +167,4 @@ if __name__ == "__main__":
 
     # Construct final dataset from db
     entries = construct_final_dataset(db)
-    write_jsonl(entries, Path("./data/final_dataset.jsonl"))
+    write_jsonl(entries, Path("./data/dataset.jsonl"))
