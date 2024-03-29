@@ -120,14 +120,7 @@ def display_titles(db):
     print(f"{len(db.all())} titles generated")
 
 
-if __name__ == "__main__":
-    load_dotenv()
-    logger.info("App started")
-
-    jsonl_path = Path("./data/dataset.jsonl")
-    db = TinyDB("./data/db.json")
-    conversations = read_jsonl(jsonl_path)
-
+def construct_database(conversations):
     chunksize = 400  # Shouldn't be too high, otherwise we'll get rate limited
     for i in range(0, len(conversations), chunksize):
         t0 = time.perf_counter()
@@ -139,3 +132,34 @@ if __name__ == "__main__":
         print(f"Chunk generation took {t1 - t0:.2f}s")
 
     display_titles(db)
+
+
+def construct_final_dataset(db):
+    Entry = Query()
+    final_dataset = []
+    for Entry in db.all():
+        final_dataset.append(Entry)
+    return final_dataset
+
+
+def write_jsonl(entries, outfile="final_dataset.jsonl"):
+    with open(outfile, "w", encoding="utf-8") as f:
+        for line in entries:
+            json.dump(line, f)
+            f.write("\n")
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    logger.info("App started")
+
+    jsonl_path = Path("./data/dataset.jsonl")
+    db = TinyDB("./data/db.json")
+    conversations = read_jsonl(jsonl_path)
+
+    # Construct the db
+    # construct_database(conversations)
+
+    # Construct final dataset from db
+    entries = construct_final_dataset(db)
+    write_jsonl(entries, Path("./data/final_dataset.jsonl"))
