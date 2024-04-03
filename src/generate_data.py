@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import sys
 import time
 from functools import wraps
@@ -137,13 +138,16 @@ def construct_database(conversations):
 def construct_final_dataset(db):
     final_messages = set()
     final_dataset = []
+
     for entry in db.all():
         # Ensure no duplicates
         if entry["message"] in final_messages:
             continue
         final_messages.add(entry["message"])
         final_dataset.append(entry)
-    print(len(final_dataset))
+
+    # Ensure we randomize order
+    random.shuffle(final_dataset)
     return final_dataset
 
 
