@@ -1,3 +1,4 @@
+import json
 from functools import partial
 
 import evaluate
@@ -98,4 +99,8 @@ if __name__ == "__main__":
     dataset = load_split_dataset("./data/dataset.jsonl")
 
     checkpoint = "google-t5/t5-small"
-    train_model(checkpoint)
+    # train_model(checkpoint)
+
+    with open("./data/test.jsonl", "w", encoding="utf-8") as f:
+        for msg in dataset["test"]["text"]:
+            f.write(f"{json.dumps({"message": msg})}\n")
