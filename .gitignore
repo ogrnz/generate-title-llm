@@ -3,3 +3,4 @@ venv
 *.log
 .DS_Store
 **/**/db.json
+results
