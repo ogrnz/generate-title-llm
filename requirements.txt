@@ -1,0 +1,6 @@
+torch
+accelerate
+transformers
+datasets
+evaluate
+rouge_score
