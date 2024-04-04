@@ -77,9 +77,9 @@ def train_model(checkpoint):
         per_device_eval_batch_size=16,
         weight_decay=0.01,
         save_total_limit=3,
-        num_train_epochs=4,
+        num_train_epochs=40,
         predict_with_generate=True,
-        # fp16=True
+        fp16=True
     )
 
     trainer = Seq2SeqTrainer(
