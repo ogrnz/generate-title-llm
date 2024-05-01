@@ -17,7 +17,7 @@ def load_messages(file_path):
 
 
 def main(args):
-    tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     summarizer = pipeline("summarization", model=args.checkpoint, tokenizer=tokenizer)
 
     if args.message:  # Directly use the message string provided
@@ -42,8 +42,15 @@ if __name__ == "__main__":
         "-c",
         "--checkpoint",
         type=str,
-        default="./results/checkpoint-20000",
-        help="Model checkpoint path or compatible huggingface model url",
+        default="ogrnz/t5-chat-titles",
+        help="Model checkpoint path or compatible huggingface model",
+    )
+    parser.add_argument(
+        "-t",
+        "--tokenizer",
+        type=str,
+        default="google-t5/t5-small",
+        help="Model tokenizer path",
     )
     parser.add_argument(
         "-f",
