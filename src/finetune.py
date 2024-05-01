@@ -58,7 +58,7 @@ def compute_metrics(eval_pred, tokenizer, metric):
     return {k: round(v, 4) for k, v in result.items()}
 
 
-def train_model(checkpoint):
+def train_model(checkpoint, dataset):
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     tokenized_dataset = dataset.map(
         partial(preprocess, tokenizer=tokenizer), batched=True
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     dataset = load_split_dataset("./data/dataset.jsonl")
 
     checkpoint = "google-t5/t5-small"
-    # train_model(checkpoint)
+    # train_model(checkpoint, dataset)
 
     with open("./data/test.jsonl", "w", encoding="utf-8") as f:
         for msg in dataset["test"]["text"]:
