@@ -105,12 +105,12 @@ async def generate_titles(conversations: list, db: TinyDB):
     return to_query, titles
 
 
-def insert_titles_into_db(messages, titles):
+def insert_titles_into_db(messages, titles, db):
     queries = []
     for message, title in zip(messages, titles):
         if title:
             query = {"message": message, "title": title}
-            logger.info(f"Title generated and inserted: {query['title']}")
+            logger.info(f"Title inserted: {query['title']}")
             queries.append(query)
         else:
             logger.warning(f"Something went wrong while generating title for {message}")
@@ -121,14 +121,23 @@ def display_titles(db):
     print(f"{len(db.all())} titles generated")
 
 
-def construct_database(conversations):
+def populate_db(db, conversations):
+    messages = []
+    titles = []
+    for conversation in conversations:
+        messages.append(conversation["message"])
+        titles.append(conversation.get("title"))
+    insert_titles_into_db(messages, titles, db)
+
+
+def construct_database(conversations, db):
     chunksize = 400  # Shouldn't be too high, otherwise we'll get rate limited
     for i in range(0, len(conversations), chunksize):
         t0 = time.perf_counter()
         messages, titles = asyncio.run(
             generate_titles(conversations[i : i + chunksize], db=db)
         )
-        insert_titles_into_db(messages, titles)
+        insert_titles_into_db(messages, titles, db)
         t1 = time.perf_counter()
         print(f"Chunk generation took {t1 - t0:.2f}s")
 
@@ -151,7 +160,7 @@ def construct_final_dataset(db):
     return final_dataset
 
 
-def write_jsonl(entries, outfile="final_dataset.jsonl"):
+def write_jsonl(entries, outfile="dataset.jsonl"):
     with open(outfile, "w", encoding="utf-8") as f:
         for line in entries:
             json.dump(line, f)
@@ -164,10 +173,14 @@ if __name__ == "__main__":
 
     jsonl_path = Path("./data/dataset.jsonl")
     db = TinyDB("./data/db.json")
-    conversations = read_jsonl(jsonl_path)
 
-    # Construct the db
-    # construct_database(conversations)
+    conversations = read_jsonl(jsonl_path)
+    # If database is empty, create it from existing messages
+    if len(db.all()) == 0:
+        populate_db(db, conversations)
+
+    # Construct the db: actually generate missing titles for conversations
+    construct_database(conversations, db)
 
     # Construct final dataset from db
     entries = construct_final_dataset(db)
