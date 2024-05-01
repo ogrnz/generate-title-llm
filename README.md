@@ -6,7 +6,8 @@ For that, a language model was fine-tuned to always output a 3-5 words title sum
 
 ## Model Information
 
-The dataset used to fine-tune the model is available on Hugging Face: https://huggingface.co/datasets/ogrnz/chat-titles.
+- [Hugging Face model card](https://huggingface.co/ogrnz/t5-chat-titles)
+- [Hugging Face dataset card](https://huggingface.co/datasets/ogrnz/chat-titles)
 
 ## Setup
 
@@ -73,7 +74,7 @@ python src/finetune.py --training-config training_config.json
 
 ### `src/infer.py`
 
-Script used to perform inference.
+Script used to perform inference. See Basic usage section.
 
 ### `src/dataset.py`
 
