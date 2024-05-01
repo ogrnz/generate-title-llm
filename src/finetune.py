@@ -57,7 +57,12 @@ def compute_metrics(eval_pred, tokenizer, metric):
     return {k: round(v, 4) for k, v in result.items()}
 
 
-def train_model(checkpoint, dataset, output_dir="./results"):
+def train_model(
+    checkpoint,
+    dataset,
+    training_args: dict = {},
+    output_dir="./results",
+):
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     tokenized_dataset = dataset.map(
         partial(preprocess, tokenizer=tokenizer), batched=True
@@ -69,16 +74,7 @@ def train_model(checkpoint, dataset, output_dir="./results"):
     # Actual training
     model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
     training_args = Seq2SeqTrainingArguments(
-        output_dir=output_dir,
-        evaluation_strategy="epoch",
-        learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        weight_decay=0.01,
-        save_total_limit=3,
-        num_train_epochs=40,
-        predict_with_generate=True,
-        fp16=True,
+        output_dir=output_dir, evaluation_strategy="epoch", **training_args
     )
 
     trainer = Seq2SeqTrainer(
@@ -97,4 +93,17 @@ def train_model(checkpoint, dataset, output_dir="./results"):
 if __name__ == "__main__":
     dataset = load_split_dataset("./data/dataset.jsonl")
     checkpoint = "google-t5/t5-small"
-    train_model(checkpoint, dataset, output_dir="./results")
+
+    training_args = {
+        "learning_rate": 2e-5,
+        "per_device_train_batch_size": 16,
+        "per_device_eval_batch_size": 16,
+        "weight_decay": 0.01,
+        "save_total_limit": 3,
+        "num_train_epochs": 40,
+        "predict_with_generate": True,
+        "fp16": True,
+    }
+    train_model(
+        checkpoint, dataset, training_args=training_args, output_dir="./results"
+    )
