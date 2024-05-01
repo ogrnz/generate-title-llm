@@ -9,3 +9,9 @@ For that, a language model was fine-tuned to always output a 3-5 words title sum
 The dataset used to fine-tune the model is available on Hugging Face: https://huggingface.co/datasets/ogrnz/chat-titles.
 
 ## Usage
+
+### `src/finetune.py`
+
+### `src/infer.py`
+
+### `src/dataset.py`
