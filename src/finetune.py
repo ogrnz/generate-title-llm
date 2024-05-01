@@ -1,3 +1,5 @@
+import argparse
+import json
 from functools import partial
 
 import evaluate
@@ -66,7 +68,6 @@ def train_model(
     checkpoint,
     dataset,
     training_args: dict = {},
-    output_dir="./results",
 ):
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     tokenized_dataset = dataset.map(
@@ -78,9 +79,7 @@ def train_model(
 
     # Actual training
     model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
-    training_args = Seq2SeqTrainingArguments(
-        output_dir=output_dir, evaluation_strategy="epoch", **training_args
-    )
+    training_args = Seq2SeqTrainingArguments(**training_args)
 
     trainer = Seq2SeqTrainer(
         model=model,
@@ -95,10 +94,15 @@ def train_model(
     trainer.train()
 
 
-if __name__ == "__main__":
-    checkpoint = "google-t5/t5-small"
-    dataset = load_split_dataset("ogrnz/chat-titles")
-    training_args = {
+def parse_json_config(file_path):
+    with open(file_path, "r") as file:
+        return json.load(file)
+
+
+def main(args):
+    default_training_args = {
+        "output_dir": args.output_dir,
+        "evaluation_strategy": "epoch",
         "learning_rate": 2e-5,
         "per_device_train_batch_size": 16,
         "per_device_eval_batch_size": 16,
@@ -109,6 +113,49 @@ if __name__ == "__main__":
         "fp16": True,
     }
 
+    # Override defaults with user provided config if available
+    if args.training_config:
+        user_args = parse_json_config(args.training_config)
+        default_training_args.update(user_args)
+
+    # Proceed with training
+    dataset = load_split_dataset(args.hf_data)
     train_model(
-        checkpoint, dataset, training_args=training_args, output_dir="./results"
+        args.checkpoint,
+        dataset,
+        default_training_args,
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fine-tune a model on a dataset")
+    parser.add_argument(
+        "-c",
+        "--checkpoint",
+        type=str,
+        default="google-t5/t5-small",
+        help="HF Model checkpoint or name",
+    )
+    parser.add_argument(
+        "-d",
+        "--hf-data",
+        type=str,
+        default="ogrnz/chat-titles",
+        help="HF dataset to fine-tune on",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=str,
+        default="./results",
+        help="Directory to save the trained model",
+    )
+    parser.add_argument(
+        "-tc",
+        "--training-config",
+        type=str,
+        help="Path to JSON file containing training configurations (`Seq2SeqTrainingArguments`)",
+    )
+    args = parser.parse_args()
+
+    main(args)
