@@ -1,9 +1,9 @@
 import json
-from transformers import pipeline
+from transformers import AutoTokenizer, pipeline
 
 
-def generate_title(message, summarizer, max_length=32):
-    return summarizer(message, max_length=max_length, min_length=5)
+def generate_title(message, summarizer, max_length=16):
+    return summarizer(message, max_length=max_length, min_length=3)
 
 
 def load_messages(file_path):
@@ -17,16 +17,13 @@ def load_messages(file_path):
 
 if __name__ == "__main__":
     messages = load_messages("./data/test.jsonl")
-    summarizer = pipeline("summarization", model="./results/checkpoint-20000")
 
-    messages = [
-        "J'ai mal au genou après avoir repris mon programme de course. J'ai peur d'avoir trop poussé. Que dois-je faire?"
-    ]
-    title = generate_title(messages[0], summarizer, max_length=16)[0]["summary_text"]
-    print(f"{title}:\n {messages[0]}\n")
+    checkpoint = "./results/checkpoint-20000"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    summarizer = pipeline("summarization", model=checkpoint, tokenizer=tokenizer)
 
-    for message in messages[:20]:
+    for message in messages:
         print("=" * 10)
-        title = generate_title(message, summarizer, max_length=16)[0]["summary_text"]
+        title = generate_title(message, summarizer)[0]["summary_text"]
         print(f"{title}:\n {message}\n")
         print("=" * 10)
