@@ -44,9 +44,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-f",
-        "--file_path",
+        "--file-path",
         type=str,
-        default="./data/test.jsonl",
         help="(optional) Path to a file containing JSONL messages",
     )
     parser.add_argument(
@@ -58,6 +57,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.file_path and not args.message:
-        parser.error("Either --file_path or --message must be provided")
+        parser.error("Either --file-path or --message must be provided")
 
     main(args)
