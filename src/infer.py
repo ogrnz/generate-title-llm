@@ -26,9 +26,12 @@ def main(args):
         messages = load_messages(args.file_path)
 
     for message in messages:
-        print("=" * 10)
         title = generate_title(message, summarizer)[0]["summary_text"]
-        print(f"{title}:\n{message}\n")
+        if args.pretty:
+            print(f"title: {title}\nmessage: {message}")
+            print("-" * 10)
+        else:
+            print({"title": title, "message": message})
 
 
 if __name__ == "__main__":
@@ -53,6 +56,12 @@ if __name__ == "__main__":
         "--message",
         type=str,
         help="(optional) Direct message string to summarize",
+    )
+    parser.add_argument(
+        "-p",
+        "--pretty",
+        action=argparse.BooleanOptionalAction,
+        help="(optional) Output format in human-readable pretty format",
     )
     args = parser.parse_args()
 
