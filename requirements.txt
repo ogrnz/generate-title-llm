@@ -1,3 +1,4 @@
+pyhton-dotenv
 torch
 accelerate
 transformers
