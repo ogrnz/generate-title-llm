@@ -1,4 +1,3 @@
-import json
 from functools import partial
 
 import evaluate
@@ -58,7 +57,7 @@ def compute_metrics(eval_pred, tokenizer, metric):
     return {k: round(v, 4) for k, v in result.items()}
 
 
-def train_model(checkpoint, dataset):
+def train_model(checkpoint, dataset, output_dir="./results"):
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     tokenized_dataset = dataset.map(
         partial(preprocess, tokenizer=tokenizer), batched=True
@@ -70,7 +69,7 @@ def train_model(checkpoint, dataset):
     # Actual training
     model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./results",
+        output_dir=output_dir,
         evaluation_strategy="epoch",
         learning_rate=2e-5,
         per_device_train_batch_size=16,
@@ -79,7 +78,7 @@ def train_model(checkpoint, dataset):
         save_total_limit=3,
         num_train_epochs=40,
         predict_with_generate=True,
-        fp16=True
+        fp16=True,
     )
 
     trainer = Seq2SeqTrainer(
@@ -97,10 +96,5 @@ def train_model(checkpoint, dataset):
 
 if __name__ == "__main__":
     dataset = load_split_dataset("./data/dataset.jsonl")
-
     checkpoint = "google-t5/t5-small"
-    # train_model(checkpoint, dataset)
-
-    with open("./data/test.jsonl", "w", encoding="utf-8") as f:
-        for msg in dataset["test"]["text"]:
-            f.write(f"{json.dumps({"message": msg})}\n")
+    train_model(checkpoint, dataset, output_dir="./results")
