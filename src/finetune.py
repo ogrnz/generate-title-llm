@@ -12,8 +12,13 @@ from transformers import (
 )
 
 
-def load_split_dataset(data_path, test_size=0.15, valid_size=0.0588):
-    dataset = load_dataset("json", data_files=data_path)
+def load_split_dataset(
+    hf_dataset=None, data_path=None, test_size=0.15, valid_size=0.0588
+):
+    if data_path is not None:  # Load custom jsonl
+        dataset = load_dataset("json", data_files=data_path)
+    else:  # Import from hub
+        dataset = load_dataset(hf_dataset)
 
     # To match t5 nomenclature
     dataset = dataset.rename_columns({"message": "text", "title": "summary"})
@@ -91,9 +96,8 @@ def train_model(
 
 
 if __name__ == "__main__":
-    dataset = load_split_dataset("./data/dataset.jsonl")
     checkpoint = "google-t5/t5-small"
-
+    dataset = load_split_dataset("ogrnz/chat-titles")
     training_args = {
         "learning_rate": 2e-5,
         "per_device_train_batch_size": 16,
@@ -104,6 +108,7 @@ if __name__ == "__main__":
         "predict_with_generate": True,
         "fp16": True,
     }
+
     train_model(
         checkpoint, dataset, training_args=training_args, output_dir="./results"
     )
